@@ -58,110 +58,106 @@ def create_app():
         if video_id and percent and choice:
             # Every parameter exists here: checking validity of choice
             choice_list = ["gensim-sum", "spacy-sum", "nltk-sum", "sumy-lsa-sum", "sumy-luhn-sum", "sumy-text-rank-sum"]
-            if choice in choice_list:
-                # Choice Correct: Proceeding with Transcript Fetch and its Summarization
-                try:
-                    # Using Formatter to store and format received subtitles properly.
-                    formatter = TextFormatter()
-                    transcript = YouTubeTranscriptApi.get_transcript(video_id)
-                    formatted_text = formatter.format_transcript(transcript).replace("\n", " ")
-
-                    # Checking the length of sentences in formatted_text string, before summarizing it.
-                    num_sent_text = len(nltk.sent_tokenize(formatted_text))
-
-                    # Pre-check if the summary will have at least one line .
-                    select_length = int(num_sent_text * (int(percent) / 100))
-
-                    # Summary will have at least 1 line. Proceed to summarize.
-                    if select_length > 0:
-
-                        # Condition satisfied for summarization, summarizing the formatted_text based on choice.
-                        if num_sent_text > 1:
-
-                            # Summarizing Formatted Text based upon the request's choice
-                            if choice == "gensim-sum":
-                                summary = gensim_summarize(formatted_text,
-                                                           percent)  # Gensim Library for TextRank Based Summary.
-                            elif choice == "spacy-sum":
-                                summary = spacy_summarize(formatted_text,
-                                                          percent)  # Spacy Library for frequency-based summary.
-                            elif choice == "nltk-sum":
-                                summary = nltk_summarize(formatted_text,
-                                                         percent)  # NLTK Library used for frequency-based summary.
-                            elif choice == "sumy-lsa-sum":
-                                summary = sumy_lsa_summarize(formatted_text,
-                                                             percent)  # Sumy for extractive summary using LSA.
-                            elif choice == "sumy-luhn-sum":
-                                summary = sumy_luhn_summarize(formatted_text,
-                                                              percent)  # Sumy Library for TF-IDF Based Summary.
-                            elif choice == "sumy-text-rank-sum":
-                                summary = sumy_text_rank_summarize(formatted_text,
-                                                                   percent)  # Sumy for Text Rank Based Summary.
-                            else:
-                                summary = None
-
-                            # Checking the length of sentences in summary string.
-                            num_sent_summary = len(nltk.sent_tokenize(summary))
-
-                            # Returning Result
-                            response_list = {
-                                # 'fetched_transcript': formatted_text,
-                                'processed_summary': summary,
-                                'length_original': len(formatted_text),
-                                'length_summary': len(summary),
-                                'sentence_original': num_sent_text,
-                                'sentence_summary': num_sent_summary
-                            }
-
-                            return jsonify(success=True,
-                                           message="Subtitles for this video was fetched and summarized successfully.",
-                                           response=response_list), 200
-
-                        else:
-                            return jsonify(success=False,
-                                           message="Subtitles are not formatted properly for this video. Unable to "
-                                                   "summarize. There is a possibility that there is no punctuation in "
-                                                   "subtitles of your video.",
-                                           response=None), 400
-
-                    else:
-                        return jsonify(success=False,
-                                       message="Number of lines in the subtitles of your video is not "
-                                               "enough to generate a summary. Number of sentences in your video: {}"
-                                       .format(num_sent_text),
-                                       response=None), 400
-
-                # Catching Exceptions
-                except VideoUnavailable:
-                    return jsonify(success=False, message="VideoUnavailable: The video is no longer available.",
-                                   response=None), 400
-                except TooManyRequests:
-                    return jsonify(success=False,
-                                   message="TooManyRequests: YouTube is receiving too many requests from this IP."
-                                           " Wait until the ban on server has been lifted.",
-                                   response=None), 500
-                except TranscriptsDisabled:
-                    return jsonify(success=False, message="TranscriptsDisabled: Subtitles are disabled for this video.",
-                                   response=None), 400
-                except NoTranscriptAvailable:
-                    return jsonify(success=False,
-                                   message="NoTranscriptAvailable: No transcripts are available for this video.",
-                                   response=None), 400
-                except NoTranscriptFound:
-                    return jsonify(success=False, message="NoTranscriptAvailable: No transcripts were found.",
-                                   response=None), 400
-                except Exception as e:
-                    # Prevent server error by returning this message to all other un-expected errors.
-                    print(e)
-                    sys.stdout.flush()
-                    return jsonify(success=False,
-                                   message="Some error occurred."
-                                           " Contact the administrator if it is happening too frequently.",
-                                   response=None), 500
-            else:
+            if choice not in choice_list:
                 return jsonify(success=False,
                                message="Invalid Choice: Please create your request with correct choice.",
                                response=None), 400
+                # Choice Correct: Proceeding with Transcript Fetch and its Summarization
+            try:
+                # Using Formatter to store and format received subtitles properly.
+                formatter = TextFormatter()
+                transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                formatted_text = formatter.format_transcript(transcript).replace("\n", " ")
+
+                # Checking the length of sentences in formatted_text string, before summarizing it.
+                num_sent_text = len(nltk.sent_tokenize(formatted_text))
+
+                # Pre-check if the summary will have at least one line .
+                select_length = int(num_sent_text * (int(percent) / 100))
+
+                if select_length <= 0:
+                    return (
+                        jsonify(
+                            success=False,
+                            message=f"Number of lines in the subtitles of your video is not enough to generate a summary. Number of sentences in your video: {num_sent_text}",
+                            response=None,
+                        ),
+                        400,
+                    )
+
+
+                if num_sent_text <= 1:
+                    return jsonify(success=False,
+                                   message="Subtitles are not formatted properly for this video. Unable to "
+                                           "summarize. There is a possibility that there is no punctuation in "
+                                           "subtitles of your video.",
+                                   response=None), 400
+
+                # Summarizing Formatted Text based upon the request's choice
+                if choice == "gensim-sum":
+                    summary = gensim_summarize(formatted_text,
+                                               percent)  # Gensim Library for TextRank Based Summary.
+                elif choice == "spacy-sum":
+                    summary = spacy_summarize(formatted_text,
+                                              percent)  # Spacy Library for frequency-based summary.
+                elif choice == "nltk-sum":
+                    summary = nltk_summarize(formatted_text,
+                                             percent)  # NLTK Library used for frequency-based summary.
+                elif choice == "sumy-lsa-sum":
+                    summary = sumy_lsa_summarize(formatted_text,
+                                                 percent)  # Sumy for extractive summary using LSA.
+                elif choice == "sumy-luhn-sum":
+                    summary = sumy_luhn_summarize(formatted_text,
+                                                  percent)  # Sumy Library for TF-IDF Based Summary.
+                elif choice == "sumy-text-rank-sum":
+                    summary = sumy_text_rank_summarize(formatted_text,
+                                                       percent)  # Sumy for Text Rank Based Summary.
+                else:
+                    summary = None
+
+                # Checking the length of sentences in summary string.
+                num_sent_summary = len(nltk.sent_tokenize(summary))
+
+                # Returning Result
+                response_list = {
+                    # 'fetched_transcript': formatted_text,
+                    'processed_summary': summary,
+                    'length_original': len(formatted_text),
+                    'length_summary': len(summary),
+                    'sentence_original': num_sent_text,
+                    'sentence_summary': num_sent_summary
+                }
+
+                return jsonify(success=True,
+                               message="Subtitles for this video was fetched and summarized successfully.",
+                               response=response_list), 200
+
+            except VideoUnavailable:
+                return jsonify(success=False, message="VideoUnavailable: The video is no longer available.",
+                               response=None), 400
+            except TooManyRequests:
+                return jsonify(success=False,
+                               message="TooManyRequests: YouTube is receiving too many requests from this IP."
+                                       " Wait until the ban on server has been lifted.",
+                               response=None), 500
+            except TranscriptsDisabled:
+                return jsonify(success=False, message="TranscriptsDisabled: Subtitles are disabled for this video.",
+                               response=None), 400
+            except NoTranscriptAvailable:
+                return jsonify(success=False,
+                               message="NoTranscriptAvailable: No transcripts are available for this video.",
+                               response=None), 400
+            except NoTranscriptFound:
+                return jsonify(success=False, message="NoTranscriptAvailable: No transcripts were found.",
+                               response=None), 400
+            except Exception as e:
+                # Prevent server error by returning this message to all other un-expected errors.
+                print(e)
+                sys.stdout.flush()
+                return jsonify(success=False,
+                               message="Some error occurred."
+                                       " Contact the administrator if it is happening too frequently.",
+                               response=None), 500
         elif video_id is None or len(video_id) <= 0:
             # video_id parameter doesn't exist in the request.
             return jsonify(success=False,
@@ -211,13 +207,14 @@ def create_app():
         return render_template('api.html')
 
     @app.before_request
-    # Before Request Function: We are redirecting any HTTP requests to HTTPS especially on heroku environment.
     def enforce_https_in_heroku():
-        if 'DYNO' in os.environ:
-            if request.headers.get('X-Forwarded-Proto') == 'http':
-                url = request.url.replace('http://', 'https://', 1)
-                code = 301
-                return redirect(url, code=code)
+        if (
+            'DYNO' in os.environ
+            and request.headers.get('X-Forwarded-Proto') == 'http'
+        ):
+            url = request.url.replace('http://', 'https://', 1)
+            code = 301
+            return redirect(url, code=code)
 
     return app
 
