@@ -1,2 +1,49 @@
-/.idea/
-/__pycache__/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE and Editor specific files
+.idea/
+.vscode/
+*.sublime-workspace
+*.swp
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Testing artifacts
+.pytest_cache/
+*.coverage
+htmlcov/
+
+# Linting artifacts
+.ruff_cache/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Secrets (if any were accidentally committed)
+*.env
+.env*
+secrets.yaml
+
+# Logs
+*.log
+
+# Notebook checkpoint files
+.ipynb_checkpoints/
+
+# Compiled extensions
+*.so
+*.dll
+*.pyd
